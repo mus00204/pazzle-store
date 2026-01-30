@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Admin Panel</title>
+    <link rel="stylesheet" href="astyle.css">
+    
+</head>
+<body>
+    
+    <div class="admin-container">
+        <h1 class="admin-header">Video Admin Panel</h1>
+        
+        <!-- Control Buttons -->
+        <div class="control-buttons">
+            <button class="control-btn" onclick="openMainPage()">
+                📺 Open Main Page
+            </button>
+            
+            <button class="control-btn test" onclick="testForm()">
+                🧪 Test Form
+            </button>
+            
+            <button class="control-btn cleanup" onclick="cleanupOrphanedFiles()">
+                🗑️ Clean Up Files
+            </button>
+            <button class="control-btn" onclick="manualResetForm()">
+             🔄 Reset Form
+        </button>
+        </div>
+        
+        <!-- Add Video Form -->
+        <div class="video-form">
+            <h3>Add New Video</h3>
+            
+            <!-- Success/Error Messages -->
+            <div class="success-message" id="successMessage"></div>
+            <div class="error-message" id="errorMessage"></div>
+            
+            <form id="addVideoForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="videoTitle">Video Title *</label>
+                        <input type="text" id="videoTitle" placeholder="Enter video title" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="videoAuthor">Author Name *</label>
+                        <input type="text" id="videoAuthor" placeholder="Enter author name" required>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                 <div class="form-group">
+        <label for="videoTime">Price * <span class="sar-text">SAR</span></label>
+        <input type="text" id="videoTime" placeholder="e.g., 123" required>
+    </div>
+                    <div class="form-group">
+                        <label for="videoViews">Views Count *</label>
+                        <input type="text" id="videoViews" placeholder="e.g., 54K views" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="timeAgo">Time Posted *</label>
+                        <input type="text" id="timeAgo" placeholder="e.g., 1 week ago" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="videoStatus">Status *</label>
+                        <select id="videoStatus" required>
+                            <option value="online">Online</option>
+                            <option value="offline">Offline</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- NEW TEXTAREA FOR DESCRIPTION -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="videoDescription">Video Description *</label>
+                        <textarea id="videoDescription" placeholder="Enter video description" required rows="4"></textarea>
+                        <small>This text will appear below the video title on the main page</small>
+                    </div>
+                </div>
+
+                <!-- UPLOAD FIELDS -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="videoFile">Upload Video File <span class="required-new">*</span></label>
+                        <input type="file" id="videoFile" accept="video/*" class="file-input">
+                        <small>MP4, WebM, or MOV files (max 50MB) - <span class="required-new">Required for new videos</span>, optional for editing</small>
+                        <div class="file-status" id="videoFileStatus"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="authorImageFile">Upload Author Image <span class="required-new">*</span></label>
+                        <input type="file" id="authorImageFile" accept="image/*" class="file-input">
+                        <small>JPG, PNG, GIF, WebP, BMP, or SVG files (max 20MB) - <span class="required-new">Required for new videos</span>, optional for editing</small>
+                        <div class="file-status" id="imageFileStatus"></div>
+                    </div>
+                </div>
+
+                <!-- Preview Section -->
+                <div class="form-row" id="previewSection">
+                    <div class="form-group">
+                        <label>Video Preview</label>
+                        <div id="videoPreview">
+                            No video selected
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Author Image Preview</label>
+                        <div id="imagePreview">
+                            No image selected
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-btn">Add Video</button>
+            </form>
+        </div>
+<!-- Add this anywhere in your admin.html, like near the top -->
+<button id="shuffleBtn" style="padding: 10px 20px; background: #6C5ECF; color: white; border: none; border-radius: 8px; cursor: pointer; margin: 10px;">
+    🔀 Shuffle Videos
+</button>
+        <!-- Videos List -->
+        <div class="videos-list">
+            <h3>Uploaded Videos</h3>
+            <div class="no-videos">No videos uploaded yet</div>
+        </div>
+
+        <!-- Debug Info -->
+        <div class="debug-info">
+            <strong>Debug Info:</strong> Check browser console (F12) for detailed logs. Videos will automatically appear on the main page.
+        </div>
+    </div>
+
+    <!-- Debug Panel -->
+    <div class="debug-panel">
+        <h4>Debug Panel</h4>
+        <div id="debugInfo">Ready</div>
+        <button onclick="testForm()">Test Form</button>
+        <button onclick="openMainPage()">Open Main</button>
+    </div>
+
+    <script src="admin.js"></script>
+    <script src="availability.js"></script>
+
+    
+    <!-- File upload restriction functionality -->
+    <script>
+        // Debug functions for the debug panel
+        function updateDebugInfo(message) {
+            const debugInfo = document.getElementById('debugInfo');
+            if (debugInfo) {
+                debugInfo.textContent = message;
+            }
+        }
+
+        // Show success message
+        function showSuccess(message) {
+            const successMsg = document.getElementById('successMessage');
+            const errorMsg = document.getElementById('errorMessage');
+            if (successMsg) {
+                successMsg.textContent = message;
+                successMsg.style.display = 'block';
+                errorMsg.style.display = 'none';
+                
+                // Auto-hide after 5 seconds
+                setTimeout(() => {
+                    successMsg.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        // Show error message
+        function showError(message) {
+            const successMsg = document.getElementById('successMessage');
+            const errorMsg = document.getElementById('errorMessage');
+            if (errorMsg) {
+                errorMsg.textContent = message;
+                errorMsg.style.display = 'block';
+                successMsg.style.display = 'none';
+                
+                // Auto-hide after 5 seconds
+                setTimeout(() => {
+                    errorMsg.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        // Override alert for better UX
+        const originalAlert = window.alert;
+        window.alert = function(message) {
+            console.log('🔔 Alert:', message);
+            updateDebugInfo('Alert: ' + message);
+            
+            if (message.includes('successfully') || message.includes('✅')) {
+                showSuccess(message);
+            } else if (message.includes('Error') || message.includes('❌')) {
+                showError(message);
+            } else {
+                originalAlert(message);
+            }
+        };
+
+        // Initialize debug info
+        document.addEventListener('DOMContentLoaded', function() {
+            updateDebugInfo('Admin panel loaded');
+            console.log('🚀 Admin panel initialized successfully');
+        });
+    </script>
+</body>
+</html>

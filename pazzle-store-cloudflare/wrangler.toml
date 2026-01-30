@@ -1,0 +1,8 @@
+name = "pazzle-store-api"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "pazzle_store"
+database_id = "3fb8cf68-c5d0-4d9f-9e6b-528c5fb97d1e"

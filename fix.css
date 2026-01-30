@@ -1,0 +1,426 @@
+/* fix-minimal.css - Even simpler size reduction */
+
+@media (max-width: 768px) {
+    /* Just make the thumbnail area smaller */
+    .video-wrapper {
+        height: 105px !important; 
+    }
+    /* Reduce text sizes slightly */
+    .video-by {
+  font-size: 0% !important;
+    }
+    .video-name{
+          font-size: 70% !important;
+          top: -14px !important;
+    }
+    .video-view {
+        font-size: 0% !important;
+        top: 3px !important;
+    }
+    /* Make stars smaller */
+    .stars-container {
+        font-size: 9px !important;
+        top: -23px !important;
+        left: -5px !important;
+        z-index: 999999 !important;
+    }
+}
+
+@media (min-width: 361px) and (max-width: 709px) {
+    .videos .video .video-wrapper {
+        height: 122px !important;
+        overflow: hidden !important;
+    }
+    
+    .videos .video .video-wrapper img,
+    .videos .video .video-wrapper video {
+        object-fit: cover !important;
+        height: 100% !important;
+        width: 100% !important;
+    }
+    
+    .videos .video .video-view {
+        position: relative !important;
+        min-height: 20px !important;
+        top: 18px !important;
+    }
+    
+    .videos .video .video-view .view-text {
+        display: none !important;
+    }
+    
+    /* Fix stars position - won't move */
+    .videos .video .view-stars {
+        display: inline-block !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        position: absolute !important;
+        right: 10px !important;
+        top: 0 !important;
+        z-index: 10 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    .videos .video .stars-fill {
+        width: 0% !important;
+    }
+}
+
+
+/* ===== LIKE NOTIFICATION STYLES ===== */
+.like-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #ea5f5f;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 10001;
+    opacity: 0;
+    transform: translateX(100px);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(234, 95, 95, 0.3);
+}
+
+.like-notification.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.like-notification svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* Ensure like button is clickable */
+#mainLikeBtn {
+    cursor: pointer !important;
+    pointer-events: auto !important;
+    position: relative !important;
+    z-index: 10 !important;
+}
+
+#mainLikeBtn:active {
+    transform: scale(0.95);
+}
+
+/* Like button feedback */
+#mainLikeBtn {
+    transition: transform 0.2s ease, background-color 0.3s ease;
+}
+
+#mainLikeBtn:active {
+    transform: scale(0.95);
+}
+
+/* Video detection debug */
+.video-detected {
+    border: 2px solid #22b07d !important;
+    box-shadow: 0 0 10px rgba(34, 176, 125, 0.5);
+}
+
+/* Loading state */
+#mainLikeBtn.loading {
+    opacity: 0.7;
+    cursor: wait;
+}
+
+/* Nuclear option - override any conflicting styles */
+#mainLikeBtn,
+button#mainLikeBtn,
+.like#mainLikeBtn,
+button.like#mainLikeBtn,
+[class*="like"]#mainLikeBtn {
+    all: unset; /* Reset everything */
+    
+    /* Rebuild with fixed styles */
+    width: 90px !important;
+    height: 40px !important;
+    min-width: 90px !important;
+    max-width: 90px !important;
+    
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    
+    background-color: #6b5ecfc7 !important;
+    border-radius: 8px !important;
+    border: none !important;
+    color: white !important;
+    font-family: var(--body-font) !important;
+    font-size: 14px !important;
+    padding: 10px 16px !important;
+    cursor: pointer !important;
+    gap: 8px !important;
+    
+    flex: 0 0 90px !important;
+    flex-shrink: 0 !important;
+    box-sizing: border-box !important;
+    position: relative !important;
+    
+    /* NO TRANSITIONS */
+    transition: none !important;
+    transform: none !important;
+    animation: none !important;
+}
+
+/* Liked state - RED background */
+#mainLikeBtn.active {
+    background-color: #ea5f5f !important;
+}
+
+/* Heart icon - WHITE by default */
+#mainLikeBtn i.fa-heart {
+    color: white !important;
+    font-size: 16px !important;
+    width: 16px !important;
+    flex-shrink: 0 !important;
+}
+
+/* Heart icon - RED when button is active/liked */
+#mainLikeBtn.active i.fa-heart {
+    color: #ff0000 !important; /* Bright red heart */
+    text-shadow: 0 0 2px rgba(255, 255, 255, 0.5); /* Optional: subtle glow */
+}
+
+/* Alternative: Make heart WHITE on red background (more visible) */
+/* If you want white heart on red background, use this instead: */
+/*
+#mainLikeBtn.active i.fa-heart {
+    color: #ffffff !important; /* White heart on red background *
+}
+*/
+
+/* Like count */
+#mainLikeBtn .like-count {
+    color: white !important;
+    background: rgba(255, 255, 255, 0.2) !important;
+    padding: 2px 6px !important;
+    border-radius: 10px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    min-width: 24px !important;
+    text-align: center !important;
+    display: inline-block !important;
+}
+
+#mainLikeBtn.active i.fa-heart {
+    color: #ff0000 !important;
+    
+}
+
+
+/* Ensure stars are always visible */
+.stars-fill {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Force stars to show even if parent is hidden */
+.video .stars-fill,
+.view-stars .stars-fill,
+.stream-area .stars-fill {
+    display: block !important;
+}
+
+
+
+@media (min-width: 320px) and (max-width: 768px) {
+.cart-header-icon {
+left: -10px;
+}
+
+.user-img {
+   margin-right: -29px !important; 
+}
+
+.notify {
+ left: 19px;   
+}
+}
+
+
+@media (min-width: 769px) and (max-width: 1025px) {
+.cart-header-icon {
+left: 10px;
+}
+}
+
+
+
+
+/* ===== PREVENT SHRINKING BELOW 320PX ===== */
+@media (max-width: 320px) {
+    body {
+        min-width: 320px !important;
+        width: 320px !important;
+        overflow-x: auto !important;
+    }
+    
+    .container {
+        min-width: 320px !important;
+        width: 320px !important;
+        transform: scale(1) !important;
+        transform-origin: left top !important;
+    }
+    
+    html {
+        min-width: 320px !important;
+        width: 320px !important;
+        overflow-x: auto !important;
+    }
+}
+
+/* Force minimum width for all devices */
+body {
+    min-width: 320px;
+}
+
+/* If you want to completely block zooming out */
+html {
+    min-width: 320px;
+    min-height: 100vh;
+}
+
+/* Container should not shrink below 320px */
+.container {
+    min-width: 320px;
+}
+
+
+
+@media (min-width: 320px) and (max-width: 360px) {
+ .videos .video .video-wrapper {
+        height: 122px !important;
+        overflow: hidden !important;
+    }
+    
+    .videos .video .video-wrapper img,
+    .videos .video .video-wrapper video {
+        object-fit: cover !important;
+        height: 100% !important;
+        width: 100% !important;
+    }
+    
+    .videos .video .video-view {
+        position: relative !important;
+        min-height: 20px !important;
+        top: 18px !important;
+    }
+    
+    .videos .video .video-view .view-text {
+        display: none !important;
+    }
+    
+    /* Fix stars position - won't move */
+    .videos .video .view-stars {
+        display: inline-block !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        position: absolute !important;
+        right: 10px !important;
+        top: 0 !important;
+        z-index: 10 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    .videos .video .stars-fill {
+        width: 0% !important;
+    }
+}
+
+
+
+
+
+
+
+
+/* ===== MOBILE BUY BUTTON - PERSPECTIVE SMALL, MOVED DOWN ===== */
+@media (max-width: 768px) {
+    /* Position further down, away from stars */
+    .video-top-edge {
+        position: absolute !important;
+        bottom: 15px !important; /* MOVED DOWN from stars */
+        right: 8px !important;
+        top: auto !important;
+        z-index: 25 !important;
+        transform: scale(0.85); /* PERSPECTIVE SMALL */
+        transform-origin: bottom right;
+    }
+    
+    /* Smaller version of desktop style */
+    .buy-button-top {
+        width: 30px !important; /* Smaller */
+        height: 30px !important; /* Smaller */
+        background: #6c5ecf !important;
+        border-radius: 6px !important; /* Slightly smaller radius */
+        box-shadow: 0 1px 4px rgba(108, 94, 207, 0.3) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        opacity: 0.9; /* Slightly transparent */
+    }
+    
+    .buy-button-top i {
+        color: white !important;
+        font-size: 14px !important; /* Smaller icon */
+    }
+    
+    /* Ensure it doesn't go back to stars area */
+    .view-stars {
+        position: relative !important;
+        z-index: 20 !important;
+        pointer-events: none; /* Prevent interference */
+    }
+    
+    /* Clear any margin that might push it up */
+    .stars-container,
+    .view-stars {
+        margin-right: 0 !important;
+        padding-right: 0 !important;
+    }
+}
+
+
+
+
+@media (min-width: 320px) and (max-width: 768px) {
+.buy-button-top {
+width: 27px !important;
+height: 27px !important;
+ 
+}
+ .video-top-edge {
+        position: absolute !important;
+        bottom: 12px !important; /* MOVED DOWN from stars */
+        right: 8px !important;
+        top: auto !important;
+        z-index: 25 !important;
+        transform: scale(0.85); /* PERSPECTIVE SMALL */
+        transform-origin: bottom right;
+    }
+}
+
+
+@media (min-width: 300px) and (max-width: 710px) {
+
+ .video-top-edge {
+        position: absolute !important;
+        bottom: 19px !important; /* MOVED DOWN from stars */
+        right: 8px !important;
+        top: auto !important;
+        z-index: 25 !important;
+        transform: scale(0.85); /* PERSPECTIVE SMALL */
+        transform-origin: bottom right;
+    }
+}

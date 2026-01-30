@@ -1,0 +1,32 @@
+[
+    {
+        "id": "1",
+        "title": "Basic Skateboard Jumping Tutorial",
+        "author": "Jordan Wise",
+        "price": 25.00,
+        "description": "Learn how to do basic jumping and landing safely",
+        "thumbnail": "https://images.unsplash.com/photo-1547447134-cd3f5c716030",
+        "views": "125,908",
+        "timeAgo": "2 days ago"
+    },
+    {
+        "id": "2", 
+        "title": "Skateboard Tips You Need to Know",
+        "author": "Tony Andrew",
+        "price": 30.00,
+        "description": "Essential tips for all skateboarders",
+        "thumbnail": "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b",
+        "views": "53,000",
+        "timeAgo": "2 weeks ago"
+    },
+    {
+        "id": "3",
+        "title": "Advanced Tricks and Techniques",
+        "author": "Thomas Hope",
+        "price": 35.00,
+        "description": "Master advanced skateboard techniques",
+        "thumbnail": "https://images.unsplash.com/photo-1547447134-cd3f5c716030",
+        "views": "89,450",
+        "timeAgo": "1 week ago"
+    }
+]
