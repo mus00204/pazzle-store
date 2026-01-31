@@ -140,8 +140,52 @@ async function loadVideosFromServer() {
         console.log('📄 Raw response (first 500 chars):', responseText.substring(0, 500));
 
         // Parse JSON
-        const videos = JSON.parse(responseText);
-        console.log(`✅ Found ${videos.length} videos`);
+        const data = JSON.parse(responseText);
+        console.log('📊 Parsed response structure:', data);
+
+        // Check what structure we have
+        let videos = [];
+        if (Array.isArray(data)) {
+            // Direct array: [video1, video2, ...]
+            videos = data;
+            console.log('✅ Response is direct array');
+        } else if (data && Array.isArray(data.videos)) {
+            // Object with videos property: { videos: [...] }
+            videos = data.videos;
+            console.log('✅ Found videos in data.videos');
+        } else if (data && Array.isArray(data.data)) {
+            // Object with data property: { data: [...] }
+            videos = data.data;
+            console.log('✅ Found videos in data.data');
+        } else if (data && typeof data === 'object') {
+            // Try to extract any array from the response
+            for (const key in data) {
+                if (Array.isArray(data[key])) {
+                    videos = data[key];
+                    console.log(`✅ Found videos in property: ${key}`);
+                    break;
+                }
+            }
+            
+            // If still no array, check if it's a success/error object
+            if (videos.length === 0 && data.success !== undefined) {
+                console.log('⚠️ Response is success/error object:', data);
+                // Try common patterns
+                if (data.data && Array.isArray(data.data)) videos = data.data;
+                else if (data.result && Array.isArray(data.result)) videos = data.result;
+            }
+        }
+
+        if (videos.length === 0) {
+            console.log('⚠️ No videos array found in response. Response was:', data);
+            // Try to create a single video from the data if it looks like a video object
+            if (data && typeof data === 'object' && data.id) {
+                console.log('📹 Creating single video from object');
+                videos = [data];
+            }
+        }
+
+        console.log(`✅ Processing ${videos.length} videos`);
 
         // Store videos globally WITH LIKE PROCESSING
         window.currentVideos = videos.map(video => ({ 
@@ -165,11 +209,11 @@ async function loadVideosFromServer() {
         }
     } catch (error) {
         console.error('❌ Error loading videos:', error);
+        console.error('❌ Error details:', error.message);
         displayVideos([]);
         updateChatAreaWithVideos([]);
     }
 }
-
 // In like.js - MODIFY THIS FUNCTION:
 function updateAllVideoStars() {
     console.log('⭐ Updating stars for all videos...');
