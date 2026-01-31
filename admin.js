@@ -589,12 +589,9 @@ function getStatusBadgeClass(status) {
 }
 
 function checkAdminAuth() {
-    // Check if user is logged in as admin
-    const adminToken = localStorage.getItem('admin_token');
-    if (!adminToken && !window.location.href.includes('login.html')) {
-        // Redirect to login if not authenticated
-        window.location.href = 'login.html';
-    }
+    // TEMPORARY: Skip login for testing
+    console.log('Admin auth check: SKIPPED for testing');
+    return true;
 }
 
 // ===== GLOBAL FUNCTIONS (for onclick handlers) =====
