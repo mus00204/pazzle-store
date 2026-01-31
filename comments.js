@@ -160,7 +160,7 @@ async showAvatarChangeDialog() {
     
     try {
         // Try to fetch all images from avatars folder using PHP script
-        const response = await fetch('./get-avatars.php');
+        const response = await fetch('https://pazzle-store-api.mus00204.workers.dev');
         if (response.ok) {
             const serverAvatars = await response.json();
             if (serverAvatars && serverAvatars.length > 0) {
@@ -439,7 +439,7 @@ async addComment(text, parentId = null) {
 
         
         try {
-            const response = await fetch('./comments.php', {
+            const response = await fetch('https://pazzle-store-api.mus00204.workers.dev', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(comment)
@@ -469,7 +469,7 @@ async addComment(text, parentId = null) {
     async deleteNow(commentId) {
         // Delete immediately - no confirmation
         try {
-            await fetch('./comments.php', {
+            await fetch('https://pazzle-store-api.mus00204.workers.dev', {
                 method: 'DELETE',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
@@ -489,7 +489,7 @@ async addComment(text, parentId = null) {
     
     async likeNow(commentId) {
         try {
-            await fetch('./comments.php', {
+            await fetch('https://pazzle-store-api.mus00204.workers.dev', {
                 method: 'PUT',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({

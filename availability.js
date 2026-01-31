@@ -140,7 +140,7 @@ async function saveAvailabilityToDB(videoId, status) {
     formData.append('video_id', videoId);
     formData.append('availability', status);
     
-    const response = await fetch('availability-api.php', {
+    const response = await fetch('https://pazzle-store-api.mus00204.workers.dev', {
         method: 'POST',
         body: formData
     });
