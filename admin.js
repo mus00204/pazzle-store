@@ -225,8 +225,21 @@ async function handleFormSubmit(e) {
         console.log('📦 Video API Response:', result);
         
         // ===== FIXED ERROR HANDLING =====
-        // Check both response.ok AND result.success
-        if (videoResponse.ok && result && (result.success !== false)) {
+        // Check if response was successful
+        if (!videoResponse.ok) {
+            // HTTP error (404, 500, etc.)
+            throw new Error(`Server error: ${videoResponse.status} ${videoResponse.statusText}`);
+        }
+        
+        // Check if we got valid result data
+        if (!result) {
+            throw new Error('No response data from server');
+        }
+        
+        // Check for success - accept undefined as success too
+        const isSuccess = result.success === true || result.success === undefined;
+        
+        if (isSuccess) {
             const message = isEditing ? '✅ Video updated successfully!' : '✅ Video added successfully!';
             showSuccessMessage(message);
             
@@ -258,9 +271,8 @@ async function handleFormSubmit(e) {
             resetFormToAddMode();
             
         } else {
-            // FIXED: Better error extraction
-            const errorMsg = result?.error || result?.message || 
-                           (videoResponse.statusText === 'OK' ? 'Unknown server error' : videoResponse.statusText);
+            // API returned success: false
+            const errorMsg = result.error || result.message || 'Unknown error occurred';
             throw new Error(errorMsg);
         }
         
