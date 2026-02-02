@@ -556,37 +556,31 @@ if (Array.isArray(videos)) {
 }
 // Load videos when page loads with error handling
 function loadVideos() {
-    console.log('📋 Loading videos for admin panel...');
-    
-    // UPDATED for Cloudflare Worker
-    fetch(`${API_URL}/api/videos`)
-        .then(response => {
-            console.log('📥 Admin API Response status:', response.status);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(videos => {
-            console.log(`📊 Found ${videos.length} videos for admin panel`);
-            
-            // 🔄 SHUFFLE on page load only
-            // Check if videos is an array
-if (Array.isArray(videos)) {
-  // FIX: Check if videos is array before spreading
-if (Array.isArray(videos)) {
-  displayVideos(shuffleArray([...videos]));
-} else {
-  console.error('❌ videos is not an array:', videos);
-  displayVideos([]); // Show empty list
-}} else {
-  console.error('Videos is not an array:', videos);
-  displayVideos([]);
-}        })
-        .catch(error => {
-            console.error('❌ Error loading videos:', error);
-            displayVideos([]);
-        });
+  console.log('📋 Loading videos for admin panel...');
+  
+  fetch(`${API_URL}/api/videos`)
+    .then(response => {
+      console.log('📥 Admin API Response status:', response.status);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then(videos => {
+      console.log(`📊 Found ${videos.length} videos for admin panel`);
+      
+      // FIXED: Check if videos exists and is array
+      if (videos && Array.isArray(videos)) {
+        displayVideos(shuffleArray([...videos]));
+      } else {
+        console.error('❌ videos is not valid array:', videos);
+        displayVideos([]);
+      }
+    })
+    .catch(error => {
+      console.error('❌ Error loading videos:', error);
+      displayVideos([]); // Show empty on error
+    });
 }
 
 function displayVideos(videos) {
