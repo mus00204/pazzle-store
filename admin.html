@@ -13,22 +13,29 @@
         <h1 class="admin-header">Video Admin Panel</h1>
         
         <!-- Control Buttons -->
-        <div class="control-buttons">
-            <button class="control-btn" onclick="openMainPage()">
-                📺 Open Main Page
-            </button>
-            
-            <button class="control-btn test" onclick="testForm()">
-                🧪 Test Form
-            </button>
-            
-            <button class="control-btn cleanup" onclick="cleanupOrphanedFiles()">
-                🗑️ Clean Up Files
-            </button>
-            <button class="control-btn" onclick="manualResetForm()">
-             🔄 Reset Form
-        </button>
-        </div>
+     <!-- Control Buttons -->
+<div class="control-buttons">
+    <button class="control-btn" onclick="openMainPage()">
+        📺 Open Main Page
+    </button>
+    
+    <button class="control-btn test" onclick="testForm()">
+        🧪 Test Form
+    </button>
+    
+    <button class="control-btn cleanup" onclick="cleanupOrphanedFiles()">
+        🗑️ Clean Up Files
+    </button>
+    
+    <button class="control-btn" onclick="manualResetForm()">
+        🔄 Reset Form
+    </button>
+    
+    <!-- ADD THIS NEW BUTTON -->
+    <button class="control-btn danger" onclick="deleteAllUploads()" style="background: #dc3545;">
+        🗑️ Delete All Uploads
+    </button>
+</div>
         
         <!-- Add Video Form -->
         <div class="video-form">
