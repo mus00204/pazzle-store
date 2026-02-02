@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+
 // Function to shuffle array randomly
 function shuffleArray(array) {
     const shuffled = [...array];
@@ -21,8 +22,8 @@ function shuffleArray(array) {
 
 console.log('Admin script starting...');
 
-// API Configuration - UPDATED for Cloudflare Worker
-const API_URL = 'https://pazzle-store-api.mus00204.workers.dev';
+// API Configuration
+const API_URL = 'https://pazzle-store-api.mus00204.workers.dev/api';
 
 // Track file usage
 let fileChoiceMade = false;
@@ -104,7 +105,7 @@ function notifyVideosUpdated() {
     }
 }
 
-async function handleFormSubmit(e) {
+function handleFormSubmit(e) {
     console.log('🟢 Form submitted!');
     e.preventDefault();
     
@@ -121,7 +122,7 @@ async function handleFormSubmit(e) {
         submitBtn.textContent = isEditing ? 'Updating...' : 'Uploading...';
     }
     
-    // Get ALL form data
+    // Get ALL form data - DECLARE HERE so it's accessible in .then()
     const title = document.getElementById('videoTitle').value;
     const author = document.getElementById('videoAuthor').value;
     const price = document.getElementById('videoTime').value;
@@ -141,116 +142,111 @@ async function handleFormSubmit(e) {
         // Clean views
         const cleanViews = views.toString().replace(/[^0-9]/g, '') || 0;
         
-        // Prepare video data
-        const videoData = {
-            title: title.trim(),
-            author: author.trim(),
-            description: description || '',
-            price: price || '0',
-            views: cleanViews.toString(),
-            timeAgo: timeAgo || 'Just now',
-            status: status || 'online',
-            availability: 'available',
-            likes: 0,
-            // Image URLs will be added after upload
-            author_img: '/avatars/default.jpg',
-            video_url: '',  // No video file support yet
-            thumbnail_url: '/avatars/default.jpg'
-        };
+        // Create FormData for file uploads
+        const formData = new FormData();
+        formData.append('action', 'add_video_admin');
+        formData.append('title', title.trim());
+        
+        // Combine author and description for the description field
+        const combinedDescription = `${author} - ${description || timeAgo || 'Video'}`;
+        formData.append('description', combinedDescription.trim());
+        
+        // Add price field
+        if (price) {
+            formData.append('price', price.trim());
+        }
+        
+        // Add time ago field
+        if (timeAgo) {
+            formData.append('time_ago', timeAgo.trim());
+        }
+        
+        // Add status field
+        formData.append('status', status);
+        formData.append('views', cleanViews);
+        formData.append('likes', 0);
         
         // Add ID if editing
         if (isEditing) {
-            videoData.id = videoId;
+            formData.append('id', videoId.trim());
         }
         
-        // ===== NEW UPLOAD FLOW =====
-        // 1. Upload image first (if provided)
-        const imageFileInput = document.getElementById('authorImageFile');
-        const imageFile = imageFileInput?.files[0];
+        // Add files if selected
+        const videoFile = document.getElementById('videoFile');
+        const imageFile = document.getElementById('authorImageFile');
+        const hasVideo = videoFile.files.length > 0;
+        const hasImage = imageFile.files.length > 0;
         
-        if (imageFile) {
-            console.log('📤 Uploading image to GitHub...');
+        if (hasVideo) {
+            formData.append('authorImageFile', videoFile.files[0]);
+            console.log('🎥 Video file added:', videoFile.files[0].name);
+        }
+        
+        if (hasImage) {
+            formData.append('authorImageFile', imageFile.files[0]);
+            console.log('🖼️ Image file added:', imageFile.files[0].name);
+        }
+        
+        console.log('📤 Sending FormData to API...');
+        
+        // Send to API
+        fetch(API_URL, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            console.log('📥 API Response status:', response.status);
+            return response.text();
+        })
+        .then(text => {
+            console.log('📦 API Response:', text);
             
             try {
-                const formData = new FormData();
-                formData.append('image', imageFile);
+                const result = JSON.parse(text);
                 
-                const uploadResponse = await fetch(`${API_URL}/api/upload`, {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                if (!uploadResponse.ok) {
-                    throw new Error(`Upload failed: ${uploadResponse.status}`);
-                }
-                
-                const uploadResult = await uploadResponse.json();
-                console.log('📦 Upload response:', uploadResult);
-                
-                if (uploadResult.success && uploadResult.url) {
-                    // Use the uploaded image for both author and thumbnail
-                    videoData.author_img = uploadResult.url;
-                    videoData.thumbnail_url = uploadResult.url;
-                    console.log('✅ Image uploaded to:', uploadResult.url);
+                if (result.success) {
+                    const message = isEditing ? '✅ Video updated successfully!' : '✅ Video added successfully!';
+                    showSuccessMessage(message);
+                    
+                    if (isEditing) {
+                        // INSTANT UPDATE: Update video in list without reloading
+                        const updatedData = {
+                            title: title.trim(),
+                            author: author.trim(),
+                            description: description || timeAgo || 'Video',
+                            price: price || '0',
+                            views: cleanViews,
+                            likes: 0,
+                            status: status
+                        };
+                        
+                        updateStatusButtonInList(videoId, status);
+                        updateEditedVideoInList(videoId, updatedData);
+                        
+                    } else {
+                        // For NEW videos: Load at TOP
+                        loadNewVideoAtTop();
+                    }
+                    
+                    // Notify main page
+                    notifyVideosUpdated();
+                    
+                    // Clear form
+                    resetFormToAddMode();
+                    
                 } else {
-                    console.log('⚠️ Image upload returned no URL, using defaults');
+                    throw new Error(result.error || result.message || 'Unknown error occurred');
                 }
-            } catch (uploadError) {
-                console.error('❌ Upload error:', uploadError);
-                // Continue with default images - don't fail the whole submission
-                showErrorMessage(`Note: Image upload failed (${uploadError.message}), using default images`);
+            } catch (parseError) {
+                console.error('❌ JSON Parse Error:', parseError);
+                throw new Error('Invalid server response');
             }
-        }
-        
-        console.log('📤 Sending video data to API:', videoData);
-        
-        // 2. Send video data to API
-        const videoResponse = await fetch(`${API_URL}/api/videos`, {
-            method: isEditing ? 'PUT' : 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(videoData)
+        })
+        .catch(error => {
+            console.error('❌ Submission error:', error);
+            showErrorMessage(`❌ Error: ${error.message}`);
+            resetSubmitButton();
         });
-        
-        console.log('📥 Video API Response status:', videoResponse.status);
-        
-        const result = await videoResponse.json();
-        console.log('📦 Video API Response:', result);
-        
-        if (result.success) {
-            const message = isEditing ? '✅ Video updated successfully!' : '✅ Video added successfully!';
-            showSuccessMessage(message);
-            
-            if (isEditing) {
-                // INSTANT UPDATE: Update video in list without reloading
-                const updatedData = {
-                    title: title.trim(),
-                    author: author.trim(),
-                    description: description || timeAgo || 'Video',
-                    price: price || '0',
-                    views: cleanViews,
-                    likes: 0,
-                    status: status
-                };
-                
-                updateStatusButtonInList(videoId, status);
-                updateEditedVideoInList(videoId, updatedData);
-                
-            } else {
-                // For NEW videos: Load at TOP
-                loadNewVideoAtTop();
-            }
-            
-            // Notify main page
-            notifyVideosUpdated();
-            
-            // Clear form
-            resetFormToAddMode();
-            
-        } else {
-            throw new Error(result.error || result.message || 'Unknown error occurred');
-        }
         
     } catch (error) {
         console.error('❌ Form processing error:', error);
@@ -263,80 +259,99 @@ async function handleFormSubmit(e) {
 function loadNewVideoAtTop() {
     console.log('🆕 Loading NEW video to add at TOP...');
     
-    fetch(`${API_URL}/api/videos`)
-        .then(response => response.json())
-        .then(videos => {
-            if (videos.length > 0) {
-                // Get the NEWEST video (should be first from API)
-                const newVideo = videos[0];
-                
-                // Create HTML for new video
-                const displayAuthor = newVideo.author || 'Unknown';
-                const displayDescription = newVideo.description || '';
-                
-                // Use the actual image URLs from the video data
-                const thumbnailSrc = newVideo.thumbnail_url || newVideo.coverImg || newVideo.authorImg || getThumbnailUrl('');
-                const displayTitle = newVideo.title || 'Untitled Video';
-                const displayViews = newVideo.views ? newVideo.views.toLocaleString() + ' views' : '0 views';
-                const displayLikes = newVideo.likes || 0;
-                const displayStatus = newVideo.status || 'online';
-                
-                const statusClass = displayStatus === 'online' ? 'status-btn status-online' : 'status-btn status-offline';
-                const statusText = displayStatus === 'online' ? 'Online' : 'Offline';
-                
-                const newVideoHTML = `
-                    <div class="video-item">
-                        <div class="video-thumbnail">
-                            <img src="${thumbnailSrc}" alt="${displayTitle}" 
-                                 style="width: 100%; height: 120px; object-fit: cover;"
-                                 onerror="this.src='${getThumbnailUrl('')}'">
-                        </div>
-                        <div class="video-info">
-                            <h4>${displayTitle}</h4>
-                            <p>By ${displayAuthor}</p>
-                            <p>${displayDescription.substring(0, 80)}${displayDescription.length > 80 ? '...' : ''}</p>
-                            <p><small>Price: ${newVideo.price || '0'} SAR | Views: ${displayViews} | Likes: ${displayLikes}</small></p>
-                            <p><small>ID: ${newVideo.id || 'unknown'}</small></p>
-                        </div>
-                        <div class="video-actions">
-                            <button class="${statusClass}" data-video-id="${newVideo.id}" data-current-status="${displayStatus}">
-                                ${statusText}
-                            </button>
-                            <button class="edit-btn" data-video-id="${newVideo.id}">Edit</button>
-                            <button class="delete-btn" data-video-id="${newVideo.id}">Delete</button>
-                        </div>
-                    </div>
-                `;
-                
-                // Add to TOP of videos list
-                const videosList = document.querySelector('.videos-list');
-                if (videosList) {
-                    // Insert after the header
-                    const header = videosList.querySelector('h3');
-                    if (header) {
-                        header.insertAdjacentHTML('afterend', newVideoHTML);
-                    } else {
-                        videosList.insertAdjacentHTML('afterbegin', newVideoHTML);
-                    }
-                    
-                    // Setup event listeners for the new video
-                    const newItem = videosList.querySelector(`[data-video-id="${newVideo.id}"]`)?.closest('.video-item');
-                    if (newItem) {
-                        setupVideoItemEvents(newItem);
-                    }
-                    
-                    // Remove "no videos" message if it exists
-                    const noVideosMsg = videosList.querySelector('.no-videos');
-                    if (noVideosMsg) {
-                        noVideosMsg.remove();
-                    }
+    fetch(`${API_URL}?action=get_videos_admin&_=` + Date.now())
+        .then(response => response.text())
+        .then(text => {
+            try {
+                const data = JSON.parse(text);
+                let videos = [];
+                if (Array.isArray(data)) {
+                    videos = data;
                 }
                 
-                console.log('✅ New video added to TOP');
+                if (videos.length > 0) {
+                    // Get the NEWEST video (should be first from API)
+                    const newVideo = videos[0];
+                    
+                    // Create HTML for new video
+                    const description = newVideo.description || '';
+                    let displayAuthor = 'Unknown';
+                    let displayDescription = description;
+                    
+                    if (description.includes(' - ')) {
+                        const parts = description.split(' - ');
+                        if (parts.length >= 2) {
+                            displayAuthor = parts[0].trim();
+                            displayDescription = parts.slice(1).join(' - ').trim();
+                        }
+                    }
+                    
+                    const thumbnailSrc = getThumbnailUrl(newVideo.thumbnail);
+                    const displayTitle = newVideo.title || 'Untitled Video';
+                    const displayViews = newVideo.views ? newVideo.views.toLocaleString() + ' views' : '0 views';
+                    const displayLikes = newVideo.likes || 0;
+                    const displayStatus = newVideo.status || 'online';
+                    
+                    const statusClass = displayStatus === 'online' ? 'status-btn status-online' : 'status-btn status-offline';
+                    const statusText = displayStatus === 'online' ? 'Online' : 'Offline';
+                    
+                    const newVideoHTML = `
+                        <div class="video-item">
+                            <div class="video-thumbnail">
+                                <img src="${thumbnailSrc}" alt="${displayTitle}" 
+                                     style="width: 100%; height: 120px; object-fit: cover;">
+                            </div>
+                            <div class="video-info">
+                                <h4>${displayTitle}</h4>
+                                <p>By ${displayAuthor}</p>
+                                <p>${displayDescription.substring(0, 80)}${displayDescription.length > 80 ? '...' : ''}</p>
+                                <p><small>Price: ${newVideo.price || '0'} SAR | Views: ${displayViews} | Likes: ${displayLikes}</small></p>
+                                <p><small>ID: ${newVideo.id || 'unknown'}</small></p>
+                            </div>
+                            <div class="video-actions">
+                                <button class="${statusClass}" data-video-id="${newVideo.id}" data-current-status="${displayStatus}">
+                                    ${statusText}
+                                </button>
+                                <button class="edit-btn" data-video-id="${newVideo.id}">Edit</button>
+                                <button class="delete-btn" data-video-id="${newVideo.id}">Delete</button>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Add to TOP of videos list
+                    const videosList = document.querySelector('.videos-list');
+                    if (videosList) {
+                        // Insert after the header
+                        const header = videosList.querySelector('h3');
+                        if (header) {
+                            header.insertAdjacentHTML('afterend', newVideoHTML);
+                        } else {
+                            videosList.insertAdjacentHTML('afterbegin', newVideoHTML);
+                        }
+                        
+                        // Setup event listeners for the new video
+                        const newItem = videosList.querySelector(`[data-video-id="${newVideo.id}"]`)?.closest('.video-item');
+                        if (newItem) {
+                            setupVideoItemEvents(newItem);
+                        }
+                        
+                        // Remove "no videos" message if it exists
+                        const noVideosMsg = videosList.querySelector('.no-videos');
+                        if (noVideosMsg) {
+                            noVideosMsg.remove();
+                        }
+                    }
+                    
+                    console.log('✅ New video added to TOP');
+                }
+            } catch (error) {
+                console.error('❌ Error loading new video:', error);
+                // Fallback: reload all videos normally
+                loadVideos();
             }
         })
         .catch(error => {
-            console.error('❌ Error loading new video:', error);
+            console.error('❌ Error fetching new video:', error);
             // Fallback: reload all videos normally
             loadVideos();
         });
@@ -390,7 +405,6 @@ function updateStatusButtonInList(videoId, newStatus) {
     
     console.log(`✅ Updated button for video ${videoId} to ${newStatus}`);
 }
-
 // Function to update edited video in the list instantly (no shuffle)
 function updateEditedVideoInList(videoId, updatedData) {
     console.log('🔄 Updating video in list:', videoId, updatedData);
@@ -440,7 +454,6 @@ function updateEditedVideoInList(videoId, updatedData) {
         console.log('✅ Video updated in list instantly');
     }
 }
-
 // Complete form reset function
 function resetFormToAddMode() {
     console.log('🔄 Resetting form to Add mode...');
@@ -544,43 +557,49 @@ function getThumbnailUrl(thumbnail) {
     
     return thumbnail;
 }
-// IN loadVideos() FUNCTION, REPLACE:
-displayVideos(shuffleArray([...videos]));
 
-// WITH:
-if (Array.isArray(videos)) {
-  displayVideos(shuffleArray([...videos]));
-} else {
-  console.error('videos is not array:', videos);
-  displayVideos([]); // Show empty list
-}
 // Load videos when page loads with error handling
 function loadVideos() {
-  console.log('📋 Loading videos for admin panel...');
-  
-  fetch(`${API_URL}/api/videos`)
-    .then(response => {
-      console.log('📥 Admin API Response status:', response.status);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return response.json();
-    })
-    .then(videos => {
-      console.log(`📊 Found ${videos.length} videos for admin panel`);
-      
-      // FIXED: Check if videos exists and is array
-      if (videos && Array.isArray(videos)) {
-        displayVideos(shuffleArray([...videos]));
-      } else {
-        console.error('❌ videos is not valid array:', videos);
-        displayVideos([]);
-      }
-    })
-    .catch(error => {
-      console.error('❌ Error loading videos:', error);
-      displayVideos([]); // Show empty on error
-    });
+    console.log('📋 Loading videos for admin panel...');
+    
+    fetch(`${API_URL}?action=get_videos_admin&_=` + Date.now())
+        .then(response => {
+            console.log('📥 Admin API Response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.text();
+        })
+        .then(text => {
+            console.log('📦 Raw API Response:', text);
+            
+            try {
+                const data = JSON.parse(text);
+                console.log('✅ JSON parsed successfully');
+                
+                let videos = [];
+                if (Array.isArray(data)) {
+                    videos = data;
+                } else if (data && Array.isArray(data.videos)) {
+                    videos = data.videos;
+                } else if (data && data.success === false) {
+                    throw new Error(data.error || data.message || 'Failed to load videos');
+                }
+                
+                console.log(`📊 Found ${videos.length} videos for admin panel`);
+                
+                // 🔄 SHUFFLE on page load only
+                displayVideos(shuffleArray([...videos]));
+                
+            } catch (parseError) {
+                console.error('❌ JSON Parse Error:', parseError);
+                displayVideos([]);
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error loading videos:', error);
+            displayVideos([]);
+        });
 }
 
 function displayVideos(videos) {
@@ -593,12 +612,20 @@ function displayVideos(videos) {
         html += '<div class="no-videos">No videos in products table yet</div>';
     } else {
         videos.forEach(video => {
-            // Extract author from description or use author field
+            // Extract author from description
             const description = video.description || '';
-            let displayAuthor = video.author || 'Unknown';
+            let displayAuthor = 'Unknown';
             let displayDescription = description;
             
-            const thumbnailSrc = video.thumbnail_url || video.coverImg || video.authorImg || getThumbnailUrl('');
+            if (description.includes(' - ')) {
+                const parts = description.split(' - ');
+                if (parts.length >= 2) {
+                    displayAuthor = parts[0].trim();
+                    displayDescription = parts.slice(1).join(' - ').trim();
+                }
+            }
+            
+            const thumbnailSrc = getThumbnailUrl(video.thumbnail);
             const displayTitle = video.title || 'Untitled Video';
             const displayViews = video.views ? video.views.toLocaleString() + ' views' : '0 views';
             const displayLikes = video.likes || 0;
@@ -652,45 +679,49 @@ function setupDeleteButtons() {
     });
 }
 
-// Delete video - Updated for Cloudflare Worker
+// Delete video - Works with products table
 function deleteVideo(id) {
     if (!confirm('Are you sure you want to delete this video?')) return;
     
-    console.log('🗑️ Deleting video:', id);
+    const formData = new FormData();
+    formData.append('action', 'delete_video');
+    formData.append('video_id', id);
     
-    // UPDATED for Cloudflare Worker
-    fetch(`${API_URL}/api/videos/${id}`, {
-        method: 'DELETE',
-        headers: {
-            'Content-Type': 'application/json',
-        }
+    fetch(API_URL, {
+        method: 'POST',
+        body: formData
     })
-    .then(response => response.json())
-    .then(result => {
-        if (result.success) {
-            showSuccessMessage('✅ Video deleted successfully!');
-            // NOTIFY MAIN PAGE TO UPDATE
-            notifyVideosUpdated();
-            
-            // Remove the video element from the page
-            const videoElement = document.querySelector(`.video-item .status-btn[data-video-id="${id}"]`)?.closest('.video-item');
-            if (videoElement) {
-                videoElement.remove();
-            }
-            
-            // If no videos left, show "no videos" message
-            const videosList = document.querySelector('.videos-list');
-            if (videosList) {
-                const videoItems = videosList.querySelectorAll('.video-item');
-                if (videoItems.length === 0) {
-                    const header = videosList.querySelector('h3');
-                    if (header) {
-                        header.insertAdjacentHTML('afterend', '<div class="no-videos">No videos in products table yet</div>');
+    .then(response => response.text())
+    .then(text => {
+        try {
+            const result = JSON.parse(text);
+            if (result.success) {
+                showSuccessMessage('✅ Video deleted successfully!');
+                // NOTIFY MAIN PAGE TO UPDATE
+                notifyVideosUpdated();
+                
+                // Remove the video element from the page
+                const videoElement = document.querySelector(`.video-item .status-btn[data-video-id="${id}"]`)?.closest('.video-item');
+                if (videoElement) {
+                    videoElement.remove();
+                }
+                
+                // If no videos left, show "no videos" message
+                const videosList = document.querySelector('.videos-list');
+                if (videosList) {
+                    const videoItems = videosList.querySelectorAll('.video-item');
+                    if (videoItems.length === 0) {
+                        const header = videosList.querySelector('h3');
+                        if (header) {
+                            header.insertAdjacentHTML('afterend', '<div class="no-videos">No videos in products table yet</div>');
+                        }
                     }
                 }
+            } else {
+                showErrorMessage('❌ Error: ' + (result.error || 'Failed to delete video'));
             }
-        } else {
-            showErrorMessage('❌ Error: ' + (result.error || 'Failed to delete video'));
+        } catch (error) {
+            showErrorMessage('❌ Error deleting video: Invalid server response');
         }
     })
     .catch(error => {
@@ -728,35 +759,40 @@ function toggleVideoStatus(videoId, newStatus, buttonElement) {
     buttonElement.textContent = 'Updating...';
     buttonElement.disabled = true;
 
-    // UPDATED for Cloudflare Worker - Update video status via PUT
-    const updateData = { status: newStatus };
+    const formData = new FormData();
+    formData.append('action', 'update_video_status');
+    formData.append('video_id', videoId);
+    formData.append('status', newStatus);
     
-    fetch(`${API_URL}/api/videos/${videoId}`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updateData)
+    fetch(API_URL, {
+        method: 'POST',
+        body: formData
     })
-    .then(response => response.json())
-    .then(result => {
-        console.log('Status update response:', result);
+    .then(response => response.text())
+    .then(text => {
+        console.log('Status update response:', text);
         
-        if (result.success) {
-            if (newStatus === 'online') {
-                buttonElement.className = 'status-btn status-online';
-                buttonElement.textContent = 'Online';
-                buttonElement.setAttribute('data-current-status', 'online');
+        try {
+            const result = JSON.parse(text);
+            if (result.success) {
+                if (newStatus === 'online') {
+                    buttonElement.className = 'status-btn status-online';
+                    buttonElement.textContent = 'Online';
+                    buttonElement.setAttribute('data-current-status', 'online');
+                } else {
+                    buttonElement.className = 'status-btn status-offline';
+                    buttonElement.textContent = 'Offline';
+                    buttonElement.setAttribute('data-current-status', 'offline');
+                }
+                
+                showSuccessMessage(`✅ Video set to ${newStatus}!`);
+                
             } else {
-                buttonElement.className = 'status-btn status-offline';
-                buttonElement.textContent = 'Offline';
-                buttonElement.setAttribute('data-current-status', 'offline');
+                throw new Error(result.error || result.message || 'Failed to update status');
             }
-            
-            showSuccessMessage(`✅ Video set to ${newStatus}!`);
-            
-        } else {
-            throw new Error(result.error || result.message || 'Failed to update status');
+        } catch (parseError) {
+            console.error('❌ JSON Parse Error:', parseError);
+            throw new Error('Invalid server response');
         }
     })
     .catch(error => {
@@ -827,29 +863,46 @@ function editVideo(id) {
     } else {
         // Fallback: Fetch from API
         console.log('⚠️ Video not in list, fetching from API...');
-        fetch(`${API_URL}/api/videos`)
-            .then(response => response.json())
-            .then(videos => {
-                const videoToEdit = videos.find(video => video.id == id);
-                
-                if (videoToEdit) {
-                    document.getElementById('videoTitle').value = videoToEdit.title || '';
-                    document.getElementById('videoAuthor').value = videoToEdit.author || '';
-                    document.getElementById('videoDescription').value = videoToEdit.description || '';
-                    document.getElementById('videoTime').value = videoToEdit.price || '';
-                    document.getElementById('videoViews').value = videoToEdit.views || 0;
-                    document.getElementById('timeAgo').value = videoToEdit.timeAgo || 'Recently';
-                    document.getElementById('videoStatus').value = videoToEdit.status || 'online';
+        fetch(`${API_URL}?action=get_videos_admin`)
+            .then(response => response.text())
+            .then(text => {
+                try {
+                    const data = JSON.parse(text);
+                    const videoToEdit = data.find(video => video.id === id);
                     
-                    const form = document.getElementById('addVideoForm');
-                    form.setAttribute('data-editing-id', id);
-                    
-                    const submitBtn = document.querySelector('.submit-btn');
-                    if (submitBtn) submitBtn.textContent = 'Update Video';
-                    
-                    resetFileChoice();
-                    updateFileInputAvailability();
-                    document.querySelector('.video-form')?.scrollIntoView({ behavior: 'smooth' });
+                    if (videoToEdit) {
+                        const description = videoToEdit.description || '';
+                        let author = '';
+                        let pureDescription = description;
+                        
+                        if (description.includes(' - ')) {
+                            const parts = description.split(' - ');
+                            if (parts.length >= 2) {
+                                author = parts[0].trim();
+                                pureDescription = parts.slice(1).join(' - ').trim();
+                            }
+                        }
+                        
+                        document.getElementById('videoTitle').value = videoToEdit.title || '';
+                        document.getElementById('videoAuthor').value = author;
+                        document.getElementById('videoDescription').value = pureDescription;
+                        document.getElementById('videoTime').value = videoToEdit.price || '';
+                        document.getElementById('videoViews').value = videoToEdit.views || 0;
+                        document.getElementById('timeAgo').value = videoToEdit.time_ago || 'Recently';
+                        document.getElementById('videoStatus').value = videoToEdit.status || 'online';
+                        
+                        const form = document.getElementById('addVideoForm');
+                        form.setAttribute('data-editing-id', id);
+                        
+                        const submitBtn = document.querySelector('.submit-btn');
+                        if (submitBtn) submitBtn.textContent = 'Update Video';
+                        
+                        resetFileChoice();
+                        updateFileInputAvailability();
+                        document.querySelector('.video-form')?.scrollIntoView({ behavior: 'smooth' });
+                    }
+                } catch (error) {
+                    console.error('Error parsing video data:', error);
                 }
             });
     }
@@ -864,10 +917,35 @@ function cleanupOrphanedFiles() {
     console.log('🗑️ Starting orphaned files cleanup...');
     showSuccessMessage('🔄 Checking for orphaned files...');
     
-    fetch(`${API_URL}/api/videos`)
-        .then(response => response.json())
-        .then(videos => {
-            showSuccessMessage(`✅ Found ${videos.length} videos in database.`);
+    fetch(`${API_URL}?action=get_videos_admin`)
+        .then(response => response.text())
+        .then(text => {
+            try {
+                const data = JSON.parse(text);
+                let videos = [];
+                if (Array.isArray(data)) videos = data;
+                else if (data && Array.isArray(data.videos)) videos = data.videos;
+                
+                const usedFiles = new Set();
+                
+                videos.forEach(video => {
+                    if (video.thumbnail && video.thumbnail.includes('api.php?file=')) {
+                        const imageFile = video.thumbnail.split('file=')[1];
+                        if (imageFile) usedFiles.add(imageFile);
+                    }
+                });
+                
+                console.log('📁 Used files:', Array.from(usedFiles));
+                
+                if (usedFiles.size === 0) {
+                    showSuccessMessage('✅ No uploaded files found in use.');
+                } else {
+                    showSuccessMessage(`✅ Found ${usedFiles.size} uploaded files in use.`);
+                }
+            } catch (error) {
+                console.error('❌ Cleanup error:', error);
+                showErrorMessage('❌ Error during cleanup: ' + error.message);
+            }
         })
         .catch(error => {
             console.error('❌ Cleanup error:', error);
