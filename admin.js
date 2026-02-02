@@ -878,7 +878,43 @@ function editVideo(id) {
             });
     }
 }
-
+// Delete ALL files from uploads folder
+async function deleteAllUploads() {
+    if (!confirm('⚠️ DANGER: This will delete ALL files from the uploads folder.\n\nThis action cannot be undone!\n\nAre you absolutely sure?')) {
+        return;
+    }
+    
+    const secondConfirm = confirm('❌ FINAL WARNING: This will permanently delete all uploaded images.\nClick OK to proceed or Cancel to abort.');
+    if (!secondConfirm) {
+        return;
+    }
+    
+    console.log('🗑️ Starting deletion of all uploads...');
+    showSuccessMessage('🔄 Deleting all uploaded files...');
+    
+    try {
+        // Call Worker endpoint to delete all uploads
+        const response = await fetch(`${API_URL}/api/cleanup-all`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showSuccessMessage(`✅ Successfully deleted ${result.deletedCount || 0} files`);
+            console.log('✅ Deletion result:', result);
+        } else {
+            throw new Error(result.error || 'Failed to delete files');
+        }
+        
+    } catch (error) {
+        console.error('❌ Delete all error:', error);
+        showErrorMessage(`❌ Error: ${error.message}`);
+    }
+}
 // Clean up orphaned files
 function cleanupOrphanedFiles() {
     if (!confirm('This will check for uploaded files that are not used by any videos. Continue?')) {
