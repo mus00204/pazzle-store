@@ -104,7 +104,7 @@ function notifyVideosUpdated() {
     }
 }
 
-function handleFormSubmit(e) {
+async function handleFormSubmit(e) {
     console.log('🟢 Form submitted!');
     e.preventDefault();
     
@@ -121,7 +121,7 @@ function handleFormSubmit(e) {
         submitBtn.textContent = isEditing ? 'Updating...' : 'Uploading...';
     }
     
-    // Get ALL form data - DECLARE HERE so it's accessible in .then()
+    // Get ALL form data
     const title = document.getElementById('videoTitle').value;
     const author = document.getElementById('videoAuthor').value;
     const price = document.getElementById('videoTime').value;
@@ -141,7 +141,7 @@ function handleFormSubmit(e) {
         // Clean views
         const cleanViews = views.toString().replace(/[^0-9]/g, '') || 0;
         
-        // Prepare data for Cloudflare Worker
+        // Prepare video data
         const videoData = {
             title: title.trim(),
             author: author.trim(),
@@ -151,7 +151,11 @@ function handleFormSubmit(e) {
             timeAgo: timeAgo || 'Just now',
             status: status || 'online',
             availability: 'available',
-            likes: 0
+            likes: 0,
+            // Image URLs will be added after upload
+            author_img: '/avatars/default.jpg',
+            video_url: '',  // No video file support yet
+            thumbnail_url: '/avatars/default.jpg'
         };
         
         // Add ID if editing
@@ -159,62 +163,94 @@ function handleFormSubmit(e) {
             videoData.id = videoId;
         }
         
-        console.log('📤 Sending to Cloudflare Worker:', videoData);
+        // ===== NEW UPLOAD FLOW =====
+        // 1. Upload image first (if provided)
+        const imageFileInput = document.getElementById('authorImageFile');
+        const imageFile = imageFileInput?.files[0];
         
-        // Send to Cloudflare Worker API - UPDATED
-        fetch(`${API_URL}/api/videos`, {
+        if (imageFile) {
+            console.log('📤 Uploading image to GitHub...');
+            
+            try {
+                const formData = new FormData();
+                formData.append('image', imageFile);
+                
+                const uploadResponse = await fetch(`${API_URL}/api/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!uploadResponse.ok) {
+                    throw new Error(`Upload failed: ${uploadResponse.status}`);
+                }
+                
+                const uploadResult = await uploadResponse.json();
+                console.log('📦 Upload response:', uploadResult);
+                
+                if (uploadResult.success && uploadResult.url) {
+                    // Use the uploaded image for both author and thumbnail
+                    videoData.author_img = uploadResult.url;
+                    videoData.thumbnail_url = uploadResult.url;
+                    console.log('✅ Image uploaded to:', uploadResult.url);
+                } else {
+                    console.log('⚠️ Image upload returned no URL, using defaults');
+                }
+            } catch (uploadError) {
+                console.error('❌ Upload error:', uploadError);
+                // Continue with default images - don't fail the whole submission
+                showErrorMessage(`Note: Image upload failed (${uploadError.message}), using default images`);
+            }
+        }
+        
+        console.log('📤 Sending video data to API:', videoData);
+        
+        // 2. Send video data to API
+        const videoResponse = await fetch(`${API_URL}/api/videos`, {
             method: isEditing ? 'PUT' : 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(videoData)
-        })
-        .then(response => {
-            console.log('📥 API Response status:', response.status);
-            return response.json();
-        })
-        .then(result => {
-            console.log('📦 API Response:', result);
+        });
+        
+        console.log('📥 Video API Response status:', videoResponse.status);
+        
+        const result = await videoResponse.json();
+        console.log('📦 Video API Response:', result);
+        
+        if (result.success) {
+            const message = isEditing ? '✅ Video updated successfully!' : '✅ Video added successfully!';
+            showSuccessMessage(message);
             
-            if (result.success) {
-                const message = isEditing ? '✅ Video updated successfully!' : '✅ Video added successfully!';
-                showSuccessMessage(message);
+            if (isEditing) {
+                // INSTANT UPDATE: Update video in list without reloading
+                const updatedData = {
+                    title: title.trim(),
+                    author: author.trim(),
+                    description: description || timeAgo || 'Video',
+                    price: price || '0',
+                    views: cleanViews,
+                    likes: 0,
+                    status: status
+                };
                 
-                if (isEditing) {
-                    // INSTANT UPDATE: Update video in list without reloading
-                    const updatedData = {
-                        title: title.trim(),
-                        author: author.trim(),
-                        description: description || timeAgo || 'Video',
-                        price: price || '0',
-                        views: cleanViews,
-                        likes: 0,
-                        status: status
-                    };
-                    
-                    updateStatusButtonInList(videoId, status);
-                    updateEditedVideoInList(videoId, updatedData);
-                    
-                } else {
-                    // For NEW videos: Load at TOP
-                    loadNewVideoAtTop();
-                }
-                
-                // Notify main page
-                notifyVideosUpdated();
-                
-                // Clear form
-                resetFormToAddMode();
+                updateStatusButtonInList(videoId, status);
+                updateEditedVideoInList(videoId, updatedData);
                 
             } else {
-                throw new Error(result.error || result.message || 'Unknown error occurred');
+                // For NEW videos: Load at TOP
+                loadNewVideoAtTop();
             }
-        })
-        .catch(error => {
-            console.error('❌ Submission error:', error);
-            showErrorMessage(`❌ Error: ${error.message}`);
-            resetSubmitButton();
-        });
+            
+            // Notify main page
+            notifyVideosUpdated();
+            
+            // Clear form
+            resetFormToAddMode();
+            
+        } else {
+            throw new Error(result.error || result.message || 'Unknown error occurred');
+        }
         
     } catch (error) {
         console.error('❌ Form processing error:', error);
