@@ -271,10 +271,10 @@ function loadNewVideoAtTop() {
                 const newVideo = videos[0];
                 
                 // Create HTML for new video
-                const description = newVideo.description || '';
-                let displayAuthor = newVideo.author || 'Unknown';
-                let displayDescription = description;
+                const displayAuthor = newVideo.author || 'Unknown';
+                const displayDescription = newVideo.description || '';
                 
+                // Use the actual image URLs from the video data
                 const thumbnailSrc = newVideo.thumbnail_url || newVideo.coverImg || newVideo.authorImg || getThumbnailUrl('');
                 const displayTitle = newVideo.title || 'Untitled Video';
                 const displayViews = newVideo.views ? newVideo.views.toLocaleString() + ' views' : '0 views';
@@ -288,7 +288,8 @@ function loadNewVideoAtTop() {
                     <div class="video-item">
                         <div class="video-thumbnail">
                             <img src="${thumbnailSrc}" alt="${displayTitle}" 
-                                 style="width: 100%; height: 120px; object-fit: cover;">
+                                 style="width: 100%; height: 120px; object-fit: cover;"
+                                 onerror="this.src='${getThumbnailUrl('')}'">
                         </div>
                         <div class="video-info">
                             <h4>${displayTitle}</h4>
