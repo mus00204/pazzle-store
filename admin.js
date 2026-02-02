@@ -513,11 +513,17 @@ function switchTab(tabName) {
         button.classList.remove('active');
     });
     
-    // Show selected tab
-    document.getElementById(`${tabName}-tab`).classList.add('active');
+    // Show selected tab (WITH SAFETY CHECK)
+    const tabElement = document.getElementById(`${tabName}-tab`);
+    if (tabElement) {
+        tabElement.classList.add('active');
+    }
     
     // Activate selected button
-    document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+    const buttonElement = document.querySelector(`[data-tab="${tabName}"]`);
+    if (buttonElement) {
+        buttonElement.classList.add('active');
+    }
     
     // Load data for the tab
     switch(tabName) {
