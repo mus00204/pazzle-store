@@ -544,7 +544,16 @@ function getThumbnailUrl(thumbnail) {
     
     return thumbnail;
 }
+// IN loadVideos() FUNCTION, REPLACE:
+displayVideos(shuffleArray([...videos]));
 
+// WITH:
+if (Array.isArray(videos)) {
+  displayVideos(shuffleArray([...videos]));
+} else {
+  console.error('videos is not array:', videos);
+  displayVideos([]); // Show empty list
+}
 // Load videos when page loads with error handling
 function loadVideos() {
     console.log('📋 Loading videos for admin panel...');
@@ -564,8 +573,13 @@ function loadVideos() {
             // 🔄 SHUFFLE on page load only
             // Check if videos is an array
 if (Array.isArray(videos)) {
+  // FIX: Check if videos is array before spreading
+if (Array.isArray(videos)) {
   displayVideos(shuffleArray([...videos]));
 } else {
+  console.error('❌ videos is not an array:', videos);
+  displayVideos([]); // Show empty list
+}} else {
   console.error('Videos is not an array:', videos);
   displayVideos([]);
 }        })
