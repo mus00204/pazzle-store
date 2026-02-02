@@ -163,7 +163,7 @@ async function handleFormSubmit(e) {
             videoData.id = videoId;
         }
         
-        // ===== NEW UPLOAD FLOW =====
+        // ===== FIXED UPLOAD FLOW =====
         // 1. Upload image first (if provided)
         const imageFileInput = document.getElementById('authorImageFile');
         const imageFile = imageFileInput?.files[0];
@@ -181,19 +181,24 @@ async function handleFormSubmit(e) {
                 });
                 
                 if (!uploadResponse.ok) {
-                    throw new Error(`Upload failed: ${uploadResponse.status}`);
+                    const errorText = await uploadResponse.text();
+                    throw new Error(`Upload failed: ${uploadResponse.status} - ${errorText}`);
                 }
                 
                 const uploadResult = await uploadResponse.json();
                 console.log('📦 Upload response:', uploadResult);
                 
-                if (uploadResult.success && uploadResult.url) {
+                // FIXED: Check for success field
+                if (uploadResult && (uploadResult.success || uploadResult.success === undefined) && uploadResult.url) {
                     // Use the uploaded image for both author and thumbnail
                     videoData.author_img = uploadResult.url;
                     videoData.thumbnail_url = uploadResult.url;
                     console.log('✅ Image uploaded to:', uploadResult.url);
                 } else {
-                    console.log('⚠️ Image upload returned no URL, using defaults');
+                    console.log('⚠️ Image upload returned no URL or failed');
+                    if (uploadResult.error) {
+                        console.error('Upload error:', uploadResult.error);
+                    }
                 }
             } catch (uploadError) {
                 console.error('❌ Upload error:', uploadError);
@@ -205,7 +210,8 @@ async function handleFormSubmit(e) {
         console.log('📤 Sending video data to API:', videoData);
         
         // 2. Send video data to API
-        const videoResponse = await fetch(`${API_URL}/api/videos`, {
+        const endpoint = isEditing ? `${API_URL}/api/videos/${videoId}` : `${API_URL}/api/videos`;
+        const videoResponse = await fetch(endpoint, {
             method: isEditing ? 'PUT' : 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -218,7 +224,9 @@ async function handleFormSubmit(e) {
         const result = await videoResponse.json();
         console.log('📦 Video API Response:', result);
         
-        if (result.success) {
+        // ===== FIXED ERROR HANDLING =====
+        // Check both response.ok AND result.success
+        if (videoResponse.ok && result && (result.success !== false)) {
             const message = isEditing ? '✅ Video updated successfully!' : '✅ Video added successfully!';
             showSuccessMessage(message);
             
@@ -231,7 +239,8 @@ async function handleFormSubmit(e) {
                     price: price || '0',
                     views: cleanViews,
                     likes: 0,
-                    status: status
+                    status: status,
+                    thumbnail_url: videoData.thumbnail_url
                 };
                 
                 updateStatusButtonInList(videoId, status);
@@ -249,7 +258,10 @@ async function handleFormSubmit(e) {
             resetFormToAddMode();
             
         } else {
-            throw new Error(result.error || result.message || 'Unknown error occurred');
+            // FIXED: Better error extraction
+            const errorMsg = result?.error || result?.message || 
+                           (videoResponse.statusText === 'OK' ? 'Unknown server error' : videoResponse.statusText);
+            throw new Error(errorMsg);
         }
         
     } catch (error) {
@@ -266,7 +278,7 @@ function loadNewVideoAtTop() {
     fetch(`${API_URL}/api/videos`)
         .then(response => response.json())
         .then(videos => {
-            if (videos.length > 0) {
+            if (videos && videos.length > 0) {
                 // Get the NEWEST video (should be first from API)
                 const newVideo = videos[0];
                 
@@ -423,6 +435,14 @@ function updateEditedVideoInList(videoId, updatedData) {
             detailsEl.textContent = `Price: ${updatedData.price || '0'} SAR | Views: ${views} | Likes: ${updatedData.likes || 0}`;
         }
         
+        // Update thumbnail image if provided
+        if (updatedData.thumbnail_url) {
+            const imgEl = videoElement.querySelector('.video-thumbnail img');
+            if (imgEl) {
+                imgEl.src = updatedData.thumbnail_url;
+            }
+        }
+        
         // Update status button
         const statusBtn = videoElement.querySelector('.status-btn');
         if (statusBtn && updatedData.status) {
@@ -549,7 +569,6 @@ function getThumbnailUrl(thumbnail) {
 function loadVideos() {
     console.log('📋 Loading videos for admin panel...');
     
-    // UPDATED for Cloudflare Worker
     fetch(`${API_URL}/api/videos`)
         .then(response => {
             console.log('📥 Admin API Response status:', response.status);
@@ -559,19 +578,19 @@ function loadVideos() {
             return response.json();
         })
         .then(videos => {
-            console.log(`📊 Found ${videos.length} videos for admin panel`);
+            console.log(`📊 Found ${videos?.length || 0} videos for admin panel`);
             
-            // 🔄 SHUFFLE on page load only
-            // Check if videos is an array
-if (Array.isArray(videos)) {
-  displayVideos(shuffleArray([...videos]));
-} else {
-  console.error('Videos is not an array:', videos);
-  displayVideos([]);
-}        })
+            // FIXED: Better array check
+            if (videos && Array.isArray(videos)) {
+                displayVideos(shuffleArray([...videos]));
+            } else {
+                console.error('❌ videos is not valid array:', videos);
+                displayVideos([]);
+            }
+        })
         .catch(error => {
             console.error('❌ Error loading videos:', error);
-            displayVideos([]);
+            displayVideos([]); // Show empty on error
         });
 }
 
@@ -604,7 +623,8 @@ function displayVideos(videos) {
                 <div class="video-item">
                     <div class="video-thumbnail">
                         <img src="${thumbnailSrc}" alt="${displayTitle}" 
-                             style="width: 100%; height: 120px; object-fit: cover;">
+                             style="width: 100%; height: 120px; object-fit: cover;"
+                             onerror="this.src='${getThumbnailUrl('')}'">
                     </div>
                     <div class="video-info">
                         <h4>${displayTitle}</h4>
@@ -659,7 +679,7 @@ function deleteVideo(id) {
     })
     .then(response => response.json())
     .then(result => {
-        if (result.success) {
+        if (result && (result.success !== false)) {
             showSuccessMessage('✅ Video deleted successfully!');
             // NOTIFY MAIN PAGE TO UPDATE
             notifyVideosUpdated();
@@ -682,7 +702,7 @@ function deleteVideo(id) {
                 }
             }
         } else {
-            showErrorMessage('❌ Error: ' + (result.error || 'Failed to delete video'));
+            showErrorMessage('❌ Error: ' + (result?.error || 'Failed to delete video'));
         }
     })
     .catch(error => {
@@ -734,7 +754,7 @@ function toggleVideoStatus(videoId, newStatus, buttonElement) {
     .then(result => {
         console.log('Status update response:', result);
         
-        if (result.success) {
+        if (result && (result.success !== false)) {
             if (newStatus === 'online') {
                 buttonElement.className = 'status-btn status-online';
                 buttonElement.textContent = 'Online';
@@ -748,7 +768,7 @@ function toggleVideoStatus(videoId, newStatus, buttonElement) {
             showSuccessMessage(`✅ Video set to ${newStatus}!`);
             
         } else {
-            throw new Error(result.error || result.message || 'Failed to update status');
+            throw new Error(result?.error || result?.message || 'Failed to update status');
         }
     })
     .catch(error => {
