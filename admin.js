@@ -562,8 +562,13 @@ function loadVideos() {
             console.log(`📊 Found ${videos.length} videos for admin panel`);
             
             // 🔄 SHUFFLE on page load only
-            displayVideos(shuffleArray([...videos]));
-        })
+            // Check if videos is an array
+if (Array.isArray(videos)) {
+  displayVideos(shuffleArray([...videos]));
+} else {
+  console.error('Videos is not an array:', videos);
+  displayVideos([]);
+}        })
         .catch(error => {
             console.error('❌ Error loading videos:', error);
             displayVideos([]);
