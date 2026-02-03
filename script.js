@@ -121,14 +121,7 @@ async function loadVideosFromServer() {
 
     try {
         // SIMPLE: Just fetch the API without extra parameters
-        const response = await fetch('https://pazzle-store-api.mus00204.workers.dev/api?_=' + Date.now(), {
-            cache: 'no-store',
-            headers: {
-                'Cache-Control': 'no-cache',
-                'Pragma': 'no-cache'
-            }
-        });
-
+       const response = await fetch('https://pazzle-store-api.mus00204.workers.dev/api/videos?_=' + Date.now());
         console.log('📥 Response status:', response.status);
 
         if (!response.ok) {
