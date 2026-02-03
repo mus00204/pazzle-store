@@ -835,7 +835,6 @@ window.updateLikeButtonForVideo = function(videoId) {
     }
 };
 }
-
 function showShareNotification(message, isError = false) {
     const notification = document.createElement('div');
     notification.className = 'share-notification' + (isError ? ' error' : '');
