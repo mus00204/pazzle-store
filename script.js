@@ -63,8 +63,7 @@ function setupSimpleRealtimeUpdates() {
 // Check for video updates without auto-refresh
 async function checkForVideoUpdates() {
     try {
-        // FIXED: Use Cloudflare Worker endpoint
-        const response = await fetch('https://pazzle-store-api.mus00204.workers.dev/api/videos');
+        const response = await fetch('./api.php?_check=' + Date.now());
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -79,10 +78,38 @@ async function checkForVideoUpdates() {
             videos = data.videos;
         }
         
-        // SIMPLIFIED: Always reload when we check for updates
-        console.log('🔄 Checking for updates, reloading videos...');
-        loadVideosFromServer();
-        return;
+        // Simple check: if number of videos changed
+        if (videos.length !== window.currentVideos.length) {
+            console.log('🔄 Video count changed, reloading...');
+            loadVideosFromServer();
+            return;
+        }
+        
+        // Check if any video data changed
+        let changed = false;
+        for (let i = 0; i < videos.length; i++) {
+            const newVideo = videos[i];
+            const oldVideo = window.currentVideos.find(v => v.id === newVideo.id);
+            
+            if (!oldVideo) {
+                changed = true;
+                break;
+            }
+            
+            if (oldVideo.title !== newVideo.title ||
+                oldVideo.author !== newVideo.author ||
+                oldVideo.views !== newVideo.views ||
+                oldVideo.timeAgo !== newVideo.timeAgo ||
+                oldVideo.status !== newVideo.status) {
+                changed = true;
+                break;
+            }
+        }
+        
+        if (changed) {
+            console.log('🔄 Video data changed, reloading...');
+            loadVideosFromServer();
+        }
         
     } catch (error) {
         console.log('❌ Update check failed:', error);
@@ -90,11 +117,17 @@ async function checkForVideoUpdates() {
 }
 
 async function loadVideosFromServer() {
-    console.log('📡 Loading videos from Cloudflare Worker...');
+    console.log('📡 Loading videos from MySQL database...');
 
     try {
-        // FIXED: Use Cloudflare Worker endpoint
-        const response = await fetch('https://pazzle-store-api.mus00204.workers.dev/api/videos');
+        // SIMPLE: Just fetch the API without extra parameters
+        const response = await fetch('https://pazzle-store-api.mus00204.workers.dev/api?_=' + Date.now(), {
+            cache: 'no-store',
+            headers: {
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+            }
+        });
 
         console.log('📥 Response status:', response.status);
 
@@ -102,8 +135,12 @@ async function loadVideosFromServer() {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        // SIMPLIFIED: Direct JSON parsing (Worker returns clean JSON)
-        const videos = await response.json();
+        // Get the response as text first to debug
+        const responseText = await response.text();
+        console.log('📄 Raw response (first 500 chars):', responseText.substring(0, 500));
+
+        // Parse JSON
+        const videos = JSON.parse(responseText);
         console.log(`✅ Found ${videos.length} videos`);
 
         // Store videos globally WITH LIKE PROCESSING
@@ -197,6 +234,8 @@ function updateVideoStatusIndicators(videos) {
         }
     });
 }
+
+
 
 // Display videos in main area
 function displayVideos(videos) {
@@ -748,30 +787,7 @@ function fallbackShare(shareText, shareUrl, videoTitle) {
             }
         });
     });
-}
-
-function showShareNotification(message, isError = false) {
-    const notification = document.createElement('div');
-    notification.className = 'share-notification' + (isError ? ' error' : '');
-    notification.textContent = message;
-    
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        notification.classList.add('show');
-    }, 10);
-    
-    setTimeout(() => {
-        notification.classList.remove('show');
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
-            }
-        }, 300);
-    }, 3000);
-}
-
-// ===== VIDEO TRACKING FOR LIKE SYSTEM =====
+    // ===== VIDEO TRACKING FOR LIKE SYSTEM =====
 // Add this ONE function ONLY - at the very end of the file:
 window.updateLikeButtonForVideo = function(videoId) {
     if (!videoId) return;
@@ -818,3 +834,82 @@ window.updateLikeButtonForVideo = function(videoId) {
         }
     }
 };
+}
+// Create video element for main grid - MISSING FUNCTION
+function createVideoElement(video, index) {
+    if (!video || typeof video !== 'object') return null;
+    
+    // GET PRICE FROM CORRECT FIELD
+    const price = video.price || '0';
+    
+    const videoDiv = document.createElement('div');
+    videoDiv.className = 'video anim';
+    videoDiv.style.setProperty('--delay', `${index * 0.1}s`);
+    videoDiv.setAttribute('data-video-id', video.id);
+    
+    // Get thumbnail
+    const thumbnailSrc = video.coverImg || video.authorImg || getDefaultVideoCover(index);
+    
+    // Calculate stars
+    const likes = parseInt(video.likes) || 0;
+    let stars = 0;
+    if (likes >= 100) stars = 5;
+    else if (likes >= 50) stars = 4;
+    else if (likes >= 25) stars = 3;
+    else if (likes >= 10) stars = 2;
+    else if (likes >= 1) stars = 1;
+    const starsPercentage = (stars / 5) * 100;
+    
+    videoDiv.innerHTML = `
+        <div class="video-cover">
+            <img src="${thumbnailSrc}" alt="${video.title}" 
+                 onerror="this.onerror=null; this.src='${getDefaultVideoCover(index)}'">
+            <div class="video-play-overlay">
+                <svg viewBox="0 0 24 24" fill="white">
+                    <path d="M8 5v14l11-7z"/>
+                </svg>
+            </div>
+        </div>
+        <video style="display: none;" preload="metadata">
+            <source src="${video.videoSrc || ''}" type="video/mp4">
+        </video>
+        <div class="video-content">
+            <img class="video-author" src="${video.authorImg || getDefaultAuthorImage(index)}" 
+                 alt="${video.author}" onerror="this.onerror=null; this.src='${getDefaultAuthorImage(index)}'">
+            <div class="video-details">
+                <h4 class="video-title">${video.title || 'Untitled Video'}</h4>
+                <p class="video-by ${video.status === 'online' ? 'online' : 'offline'}">${video.author || 'Unknown'}</p>
+                <p class="video-info">${video.views || '0'} views • ${video.timeAgo || 'Recently'}</p>
+                <!-- FIX: Uses video.price instead of video.time -->
+                <p class="video-time">${price} SAR</p>
+                <div class="video-stars">
+                    <div class="stars-background">★★★★★</div>
+                    <div class="stars-fill" style="width: ${starsPercentage}%">★★★★★</div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    return videoDiv;
+}
+function showShareNotification(message, isError = false) {
+    const notification = document.createElement('div');
+    notification.className = 'share-notification' + (isError ? ' error' : '');
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 10);
+    
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 3000);
+}
+
