@@ -63,8 +63,7 @@ function setupSimpleRealtimeUpdates() {
 // Check for video updates without auto-refresh
 async function checkForVideoUpdates() {
     try {
-        const response = await fetch('./api.php?_check=' + Date.now());
-        
+        const response = await fetch('https://pazzle-store-api.mus00204.workers.dev/api/videos?_check=' + Date.now());        
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -120,8 +119,9 @@ async function loadVideosFromServer() {
     console.log('📡 Loading videos from MySQL database...');
 
     try {
-        // SIMPLE: Just fetch the API without extra parameters
-       const response = await fetch('https://pazzle-store-api.mus00204.workers.dev/api/videos?_=' + Date.now());
+        // FIXED: Correct URL and removed blocked headers
+        const response = await fetch('https://pazzle-store-api.mus00204.workers.dev/api/videos?_=' + Date.now());
+
         console.log('📥 Response status:', response.status);
 
         if (!response.ok) {
