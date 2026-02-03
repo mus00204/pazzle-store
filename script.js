@@ -167,7 +167,7 @@ async function loadVideosFromServer() {
 function updateAllVideoStars() {
     console.log('⭐ Updating stars for all videos...');
     
-    if (!window.currentVideos || !Array.isArray(window.currentVideos)) {
+    if (!window.currentVideos || !Arravray(window.currentVideos)) {
         console.log('⚠️ No videos loaded yet');
         return;
     }
