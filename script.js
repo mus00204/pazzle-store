@@ -461,13 +461,13 @@ function playVideoInStreamView(video) {
     // Tell the cart system which video is playing
     if (window.cartSystem && window.cartSystem.updateCurrentVideoForBuy) {
         console.log('🛒 Setting current video for cart:', video.id);
-        const videoPrice = parseFloat(video.time) || 0;
+        const videoPrice = parseFloat(video.price) || 0;
         window.cartSystem.updateCurrentVideoForBuy(video.id, videoPrice);
     } else {
         console.log('⚠️ Cart system not available yet');
         // Try to set it directly
         if (window.cartSystem && window.cartSystem.setCurrentVideo) {
-            const videoPrice = parseFloat(video.time) || 0;
+            const videoPrice = parseFloat(video.price) || 0;
             window.cartSystem.setCurrentVideo(video.id, videoPrice);
         }
     }
