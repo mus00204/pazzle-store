@@ -265,7 +265,7 @@ videoDiv.addEventListener('click', function(e) {
         
         <div class="video-time">
             <img src="saudi-riyal-symbol/saudi-riyal-symbol.svg" class="price-svg" alt="SAR">
-            ${video.time || '0'}
+            ${video.price || '0'}
         </div>
         
         <div class="video-wrapper">

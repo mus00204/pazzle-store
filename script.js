@@ -261,12 +261,7 @@ function displayVideos(videos) {
     updateVideoStatusIndicators(videos);
     setupVideoInteractions();
 }
-function createVideoElement(video, index) {
-    // Find the existing function and REPLACE it with this
-    const price = video.price || '0';
-    
-    // Return null to prevent errors, but videos won't display
-}
+
 // Update chat area with SHUFFLED videos
 function updateChatAreaWithVideos(videos) {
     console.log('🔄 Updating chat area with', videos.length, 'videos');
