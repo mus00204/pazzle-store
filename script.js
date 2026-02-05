@@ -266,7 +266,6 @@ function createVideoElement(video, index) {
     const price = video.price || '0';
     
     // Return null to prevent errors, but videos won't display
-    return null;
 }
 // Update chat area with SHUFFLED videos
 function updateChatAreaWithVideos(videos) {
