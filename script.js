@@ -261,7 +261,62 @@ function displayVideos(videos) {
     updateVideoStatusIndicators(videos);
     setupVideoInteractions();
 }
-
+function createVideoElement(video, index) {
+    console.log('🎬 Creating video, price is:', video.price);
+    
+    if (!video || typeof video !== 'object') return null;
+    
+    // GET PRICE FROM CORRECT FIELD
+    const price = video.price || '0';
+    
+    const videoDiv = document.createElement('div');
+    videoDiv.className = 'video anim';
+    videoDiv.style.setProperty('--delay', `${index * 0.1}s`);
+    videoDiv.setAttribute('data-video-id', video.id);
+    
+    const thumbnailSrc = video.coverImg || video.authorImg || getDefaultVideoCover(index);
+    
+    const likes = parseInt(video.likes) || 0;
+    let stars = 0;
+    if (likes >= 100) stars = 5;
+    else if (likes >= 50) stars = 4;
+    else if (likes >= 25) stars = 3;
+    else if (likes >= 10) stars = 2;
+    else if (likes >= 1) stars = 1;
+    const starsPercentage = (stars / 5) * 100;
+    
+    videoDiv.innerHTML = `
+        <div class="video-cover">
+            <img src="${thumbnailSrc}" alt="${video.title}" 
+                 onerror="this.onerror=null; this.src='${getDefaultVideoCover(index)}'">
+            <div class="video-play-overlay">
+                <svg viewBox="0 0 24 24" fill="white">
+                    <path d="M8 5v14l11-7z"/>
+                </svg>
+            </div>
+        </div>
+        <video style="display: none;" preload="metadata">
+            <source src="${video.videoSrc || ''}" type="video/mp4">
+        </video>
+        <div class="video-content">
+            <img class="video-author" src="${video.authorImg || getDefaultAuthorImage(index)}" 
+                 alt="${video.author}" onerror="this.onerror=null; this.src='${getDefaultAuthorImage(index)}'">
+            <div class="video-details">
+                <h4 class="video-title">${video.title || 'Untitled Video'}</h4>
+                <p class="video-by ${video.status === 'online' ? 'online' : 'offline'}">${video.author || 'Unknown'}</p>
+                <p class="video-info">${video.views || '0'} views • ${video.timeAgo || 'Recently'}</p>
+                <!-- PRICE DISPLAY - USING video.price -->
+                <p class="video-time">${price} SAR</p>
+                <div class="video-stars">
+                    <div class="stars-background">★★★★★</div>
+                    <div class="stars-fill" style="width: ${starsPercentage}%">★★★★★</div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    return videoDiv;
+}
 // Update chat area with SHUFFLED videos
 function updateChatAreaWithVideos(videos) {
     console.log('🔄 Updating chat area with', videos.length, 'videos');
